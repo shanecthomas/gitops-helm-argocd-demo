@@ -216,3 +216,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# WIP / Backup files
+.wip
+.bak
+.backup
+
+# Secrets
+.secret
+.secrets
+.key
