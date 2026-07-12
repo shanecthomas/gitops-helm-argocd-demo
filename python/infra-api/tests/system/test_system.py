@@ -1,11 +1,12 @@
 """
 System tests — run against a live container (see CI workflow).
-Requires the app to actually be running on localhost:5050.
+Requires the app to actually be running (see BASE_URL).
 """
 
+import os
 import requests
 
-BASE_URL = "http://localhost:5050"
+BASE_URL = os.getenv("BASE_URL", "http://localhost:5050")
 
 
 def test_health_endpoint_live():
