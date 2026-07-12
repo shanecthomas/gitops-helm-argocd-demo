@@ -15,7 +15,7 @@ env:
   IMAGE_NAME: infra-api
   APP_DIR: python/infra-api
   APP_PORT: 5050
-  DOCKER_REGISTRY: ${{ env.DOCKER_REGISTRY }}
+  DOCKER_REGISTRY: ghcr.io
   
 
 jobs:
