@@ -40,6 +40,7 @@ jobs:
           helm upgrade --install infra-api ./gitops/helm/${{ env.APP_NAME }} \
             --set image.repository=ghcr.io/${{ github.repository_owner }}/${{ env.APP_NAME }} \
             --set image.tag=${{ steps.meta.outputs.tag }} \
+            --create-namespace \
             --namespace ${{ env.NAMESPACE }} \
             --wait --timeout 60s
 
