@@ -1,4 +1,4 @@
-name: Infrastructure API CI
+name: CI - Infrastructure API
 
 on:
   push:
