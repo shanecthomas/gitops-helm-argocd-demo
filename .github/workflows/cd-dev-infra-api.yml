@@ -1,0 +1,57 @@
+name: CD (Dev) - Infrastructure API
+
+on:
+  workflow_run:
+    workflows: ["CI - Infrastructure API"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  APP_NAME: infra-api
+  NAMESPACE: dev
+  PORT: 5050
+
+jobs:
+  deploy-dev:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: ${{ env.NAMESPACE }}-cluster
+
+      - name: Verify cluster is up
+        run: kubectl cluster-info
+
+      - name: Set image tag from CI run
+        id: meta
+        run: echo "tag=$(echo ${{ github.event.workflow_run.head_sha }} | head -c7)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy via Helm
+        run: |
+          helm upgrade --install infra-api ./helm/infra-api \
+            --set image.repository=ghcr.io/${{ github.repository_owner }}/${{ env.APP_NAME }} \
+            --set image.tag=${{ steps.meta.outputs.tag }} \
+            --create-namespace \
+            --namespace ${{ env.NAMESPACE }} \
+            --wait --timeout 60s
+
+      - name: Verify pods are running
+        run: kubectl get pods -n ${{ env.NAMESPACE }}
+
+      - name: Port-forward and check health
+        run: |
+          kubectl port-forward -n ${{ env.NAMESPACE }} svc/${{ env.APP_NAME }} ${{ env.PORT }}:${{ env.PORT }} &
+          sleep 5
+          curl -f http://localhost:${{ env.PORT }}/health || (kubectl logs -n ${{ env.NAMESPACE }} -l app=${{ env.APP_NAME }}  && exit 1)
+
+      - name: Show deployed version
+        run: curl -s http://localhost:${{ env.PORT }}/version
