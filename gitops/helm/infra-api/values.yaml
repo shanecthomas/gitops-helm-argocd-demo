@@ -1,0 +1,35 @@
+# Default values — used for dev environment
+replicaCount: 1
+
+image:
+  repository: ghcr.io/shanecthomas/infra-api
+  tag: dev-latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 5050
+
+env:
+  APP_ENV: dev
+  PORT: "5050"
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+livenessProbe:
+  path: /health
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  path: /health
+  initialDelaySeconds: 3
+  periodSeconds: 5
+
+namespace: dev
