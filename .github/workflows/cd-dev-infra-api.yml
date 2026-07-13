@@ -37,7 +37,7 @@ jobs:
 
       - name: Deploy via Helm
         run: |
-          helm upgrade --install infra-api ./helm/infra-api \
+          helm upgrade --install infra-api ./gitops/helm/${{ env.APP_NAME }} \
             --set image.repository=ghcr.io/${{ github.repository_owner }}/${{ env.APP_NAME }} \
             --set image.tag=${{ steps.meta.outputs.tag }} \
             --create-namespace \
