@@ -10,6 +10,7 @@ terraform {
 
 provider "azurerm" {
   features {}
+  resource_provider_registrations = "none"
 }
 
 # Terraform does not create or destroy this group — only the cluster inside it.
