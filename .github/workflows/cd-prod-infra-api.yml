@@ -36,7 +36,7 @@ jobs:
 
       - name: Terraform apply — provision AKS
         working-directory: terraform
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
 
       - name: Get kubeconfig
         working-directory: terraform
@@ -75,4 +75,4 @@ jobs:
       - name: Terraform destroy (Demo cleanup)
         if: always()
         working-directory: terraform
-        run: terraform destroy -auto-approve
+        run: terraform destroy -auto-approve -var="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
