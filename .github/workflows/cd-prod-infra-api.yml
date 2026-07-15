@@ -1,0 +1,78 @@
+name: CD (Prod) - Infrastructure API
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag (SHA) to promote to prod"
+        required: true
+        type: string
+
+permissions:
+  id-token: write   # required for Azure OIDC
+  contents: read
+
+jobs:
+  deploy-prod:
+    name: Deploy to Prod (Demo)
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        working-directory: terraform
+        run: terraform init
+
+      - name: Terraform apply — provision AKS
+        working-directory: terraform
+        run: terraform apply -auto-approve
+
+      - name: Get kubeconfig
+        working-directory: terraform
+        run: |
+          terraform output -raw kube_config > $RUNNER_TEMP/kubeconfig
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
+
+      - name: Verify cluster is reachable
+        run: kubectl cluster-info
+
+      - name: Install ArgoCD
+        run: |
+          kubectl create namespace argocd
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+          kubectl -n argocd wait --for=condition=available --timeout=180s deployment/argocd-server
+
+      - name: Apply ArgoCD Application (prod)
+        run: |
+          sed "s/\$IMAGE_TAG/${{ inputs.image_tag }}/" gitops/argocd/argocd-infra-api.yaml | kubectl apply -f -
+
+      - name: Wait for ArgoCD sync
+        run: |
+          kubectl -n argocd wait --for=jsonpath='{.status.sync.status}'=Synced \
+            application/infra-api-prod --timeout=180s
+          kubectl -n prod wait --for=condition=available --timeout=120s deployment/infra-api
+
+      - name: Verify prod behavior
+        run: |
+          kubectl port-forward -n prod svc/infra-api 5050:5050 &
+          sleep 5
+          echo "--- /health ---"      && curl -sf http://localhost:5050/health
+          echo "--- /version ---"     && curl -sf http://localhost:5050/version
+          echo "--- /excuse (prod tone) ---" && curl -sf http://localhost:5050/excuse
+          echo "--- /oncall (prod tone) ---" && curl -sf http://localhost:5050/oncall
+
+      - name: Terraform destroy (Demo cleanup)
+        if: always()
+        working-directory: terraform
+        run: terraform destroy -auto-approve
