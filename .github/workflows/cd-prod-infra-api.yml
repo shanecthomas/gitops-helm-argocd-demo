@@ -36,7 +36,7 @@ jobs:
 
       - name: Terraform apply — provision AKS
         working-directory: terraform
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
 
       - name: Get kubeconfig
         working-directory: terraform
@@ -50,7 +50,7 @@ jobs:
       - name: Install ArgoCD
         run: |
           kubectl create namespace argocd
-          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+          kubectl create -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
           kubectl -n argocd wait --for=condition=available --timeout=180s deployment/argocd-server
 
       - name: Apply ArgoCD Application (prod)
@@ -75,4 +75,4 @@ jobs:
       - name: Terraform destroy (Demo cleanup)
         if: always()
         working-directory: terraform
-        run: terraform destroy -auto-approve
+        run: terraform destroy -auto-approve -var="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
